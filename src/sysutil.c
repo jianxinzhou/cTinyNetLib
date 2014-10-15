@@ -66,8 +66,8 @@ int32_t recv_int32(int sockfd)
     int nread = readn(socket, &tmp, sizeof(int32_t));
     if(nread == -1) // ERROR
         ERR_EXIT("recv_int32");
-    else if(0< nread < sizeof(int32_t) || nread == 0)
-        return 0;  // EOF 与 所读字节数小于32字节，均作为关闭处理
+    else if(nread < sizeof(int32_t))
+        return 0;  // 所读字节数小于32字节，作为关闭处理
 
     return ntohs(tmp); //转化为主机字节序
 }
