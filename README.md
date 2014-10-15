@@ -34,4 +34,13 @@ Welcome to the cTinyNetLib wiki!
      用于接收对方将要发送的数据量的字节数                                   
      recv_int32的内部实现是使用readn，从套接字缓冲区中取走内容                       
      显然如果在read的过程中发生错误，readn会返回-1，此时recv_int32的处理是直接将程序挂掉                              
-     注意：套接字缓冲区可能会有部分不完整的发送者所write的内容，因此此时readn返回的字节数必将会小于32个字节，此时recv_int32的处      理是返回0，也就是视作对方关闭套接字，而实际情况也正是如此，因为如果对方出错，就直接挂掉程序了，套接字也就关闭了。
+     注意：套接字缓冲区可能会有部分不完整的发送者所write的内容，因此此时readn返回的字节数必将会小于32个字节，此时recv_int32的处      理是返回0，也就是视作对方关闭套接字，而实际情况也正是如此，因为如果对方出错，就直接挂掉程序了，套接字也就关闭了。    
+     
+###3. send_msg_with_len和recv_msg_with_len    
+  a) void send_msg_with_len(int sockfd, const void *usrbuf, size_t count)    
+     内部实现首先使用send_int32（包含错误处理），之后在发送count字节的数据量过程中如果出错(writen会返回-1)也直接挂掉程序    
+  
+  b) size_t recv_msg_with_len(int sockfd, void *usrbuf, size_t bufsize)       
+     内部实现首先使用recv_int32，如果recv_int32返回0，那么size_t recv_msg_with_len也返回0，表示对方关闭套接字      
+     否则从套接字缓冲区中读取bufszie个字节，如果读不够，返回0，视作对方关闭套接字。    
+     
