@@ -43,4 +43,7 @@ Welcome to the cTinyNetLib wiki!
   b) size_t recv_msg_with_len(int sockfd, void *usrbuf, size_t bufsize)       
      内部实现首先使用recv_int32，如果recv_int32返回0，那么size_t recv_msg_with_len也返回0，表示对方关闭套接字      
      否则从套接字缓冲区中读取bufszie个字节，如果读不够，返回0，视作对方关闭套接字。    
+
+###4. 小结
+  两种情况：发送方网络断线以及发送发生错误（发送方的处理都是直接挂掉本程序）都会导致向套接字缓冲区中发送不完整的内容，从而导致接收方取不全内容，此时接收方返回0，视作对方关闭套接字。
      
