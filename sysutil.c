@@ -43,11 +43,12 @@ void send_int32(int sockfd, int32_t val)
 {
     //先转化为网络字节序
     int32_t tmp = htonl(val);
-    if(writen(sockfd, &tmp, sizeof(int32_t)) != sizeof(int32_t))
+    if(writen(sockfd, &tmp, sizeof(int32_t)) != sizeof(int32_t)) // 实际上这就一种情况，writen出错返回-1
         ERR_EXIT("send_int32");
 }
 
 // 接收对方将要发送的数据量大小
+/*
 int32_t recv_int32(int sockfd)
 {
     int32_t tmp;
@@ -57,6 +58,18 @@ int32_t recv_int32(int sockfd)
     else if(nread != sizeof(int32_t))
         ERR_EXIT("recv_int32");
     return ntohl(tmp); //转化为主机字节序
+}
+*/
+int32_t recv_int32(int sockfd)
+{
+    int32_t tmp;
+    int nread = readn(socket, &tmp, sizeof(int32_t));
+    if(nread == -1) // ERROR
+        ERR_EXIT("recv_int32");
+    else if(0< nread < sizeof(int32_t) || nread == 0)
+        return 0;  // EOF 与 所读字节数小于32字节，均作为关闭处理
+
+    return ntohs(tmp); //转化为主机字节序
 }
 
 // 内核缓冲区(协议栈)中未必有count个字节，因此一次read未必能读走count个字节
@@ -460,8 +473,8 @@ const char *get_tcp_info(int peerfd)
 
 void send_msg_with_len(int sockfd, const void *usrbuf, size_t count)
 {
-    send_int32(sockfd, count);
-    if(writen(sockfd, usrbuf, count) != count)
+    send_int32(sockfd, count);                 // 出错情况已在send_int32中处理
+    if(writen(sockfd, usrbuf, count) != count) // 其实就一种情况，即writen出错返回-1
         ERR_EXIT("send_msg_with_len");
 }
 
@@ -481,7 +494,7 @@ size_t recv_msg_with_len(int sockfd, void *usrbuf, size_t bufsize)
     ssize_t nread = readn(sockfd, usrbuf, len);
     if(nread == -1)
         ERR_EXIT("recv_msg_with_len");
-    else if((size_t)nread < len) //字节不够做关闭处理
+    else if((size_t)nread < len) //字节不够做关闭处理（实际上包含了nread == 0 以及 0<nread<len）
         return 0;
 
     return len;
