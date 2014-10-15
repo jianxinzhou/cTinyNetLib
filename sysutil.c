@@ -12,7 +12,11 @@
 ssize_t recv_peek(int sockfd, void *buf, size_t len);
 
 
-
+// 第一次向一个关闭的socket write时，会收到RST置位报文
+// 当第二次再write时，即往收到RST报文的socket写入数据，
+// 会触发SIGPIPE信号
+// 为了防止服务器因为客户端的关闭而挂掉
+// 着了设置信号处理函数，当收到SIGPIPE信号时，什么也不做
 void handle_sigpipe()
 {
     if(signal(SIGPIPE, SIG_IGN) == SIG_ERR)
@@ -26,13 +30,15 @@ void nano_sleep(double val)
     tv.tv_nsec = (val - tv.tv_sec) * 1000 * 1000 * 1000;
 
     int ret;
+    // 睡眠可能会被信号中断
+    // 遇到这种情况继续睡够剩余的时间
     do
     {
         ret = nanosleep(&tv, &tv);
     }while(ret == -1 && errno == EINTR);
 }
 
-
+// 告诉对方会发送多少字节的数据量
 void send_int32(int sockfd, int32_t val)
 {
     //先转化为网络字节序
@@ -41,6 +47,7 @@ void send_int32(int sockfd, int32_t val)
         ERR_EXIT("send_int32");
 }
 
+// 接收对方将要发送的数据量大小
 int32_t recv_int32(int sockfd)
 {
     int32_t tmp;
@@ -52,7 +59,22 @@ int32_t recv_int32(int sockfd)
     return ntohl(tmp); //转化为主机字节序
 }
 
-
+// 内核缓冲区(协议栈)中未必有count个字节，因此一次read未必能读走count个字节
+// 为什么说好要发count个字节，而内核缓冲区未必有count个字节，
+// 因为涉及到滑动窗口等因素，一次向对方发送write个字节，
+// 未必就一定能发送count个字节到内核缓冲区中
+// 因此需要readn函数不断从内核缓冲区read来保证可以读取count个字节
+// 有一种情况需要注意：当遇到EOF（即对方关闭写端时，此时read会返回0），
+// 此时可能并未读满count个字节（因为对方没有发满count个字节），
+// 那么读了多少字节就返回多少字节
+// 因此readn要么出错返回-1，要么读满返回count，要么遇到EOF读到多少返回多少
+/**
+ * readn - 读取固定字节数
+ * @fd:    文件描述符
+ * @buf:   接收缓冲区
+ * @count: 要读取的字节数
+ * 成功返回count，失败返回-1，读到EOF返回小于count
+ */
 ssize_t readn(int fd, void *buf, size_t count)
 {
     size_t nleft = count;  //剩余的字节数
@@ -78,6 +100,19 @@ ssize_t readn(int fd, void *buf, size_t count)
     return (count - nleft);
 }
 
+// 需要向对方发送count个字节（注意是，发送到协议栈内核缓冲区，对方read也是从协议栈中饭read）
+// 由于网络拥塞等问题（滑动窗口技术），发送方未必一次就可以将count个字节发送到协议栈中，
+// 因此需要writen函数，不断向协议栈中write
+// 注意一种情况：发送方可能向协议栈中write数次后，在下一次wrire中发生错误，此时直接返回-1，表示出错
+// 因此writen要么出错返回-1，要么返回count
+// 无论是read和write，被信号中断时，一定是处于阻塞状态
+/**
+ * writen - 发送固定字节数
+ * @fd:     文件描述符
+ * @buf:    发送缓冲区
+ * @count:  要读取的字节数
+ * 成功返回count，失败返回-1
+ */
 ssize_t writen(int fd, const void *buf, size_t count)
 {
     size_t nleft = count;
@@ -98,24 +133,44 @@ ssize_t writen(int fd, const void *buf, size_t count)
         bufp += nwrite;
     }
     
-    return count;
+    return count; // 一定时返回count个字节
 }
 
-//预览内核缓冲区数据
+//预览内核缓冲区数据，一次最多预览len个
+/**
+ * recv_peek - 仅仅查看套接字缓冲区数据，但不移出数据
+ * @socket: 套接字
+ * @buf:    接收缓冲区
+ * @len:    长度
+ * 成功返回>=0，失败返回-1
+ */ 
 ssize_t recv_peek(int sockfd, void *buf, size_t len)
-{
+{ 
     int nread;
     do
     {
-        nread = recv(sockfd, buf, len, MSG_PEEK);
+        nread = recv(sockfd, buf, len, MSG_PEEK); // 这个过程只成功调用一次，peek到多少算多少
     }
-    while(nread == -1 && errno == EINTR);
-
+    while(nread == -1 && errno == EINTR); // 如果当recv在阻塞的状态下被中断，会继续读取
+    
+    // 1. 出错返回-1
+    // 2. EOF返回0
+    // 3. 读到多少返回多少
     return nread;
 }
 
 
-
+/**
+ * readline - 按行读取数据
+ * @sockfd:   套接字
+ * @buf:      接收缓冲区
+ * @maxlen:   每行最大长度
+ * 成功返回>=0，失败返回-1
+ */
+// 出错返回1
+// EOF返回0（只要没遇到\n前，就EOF，返回0，因为默认发送方发送的每条消息以'\n'结束。此处可能一开始就是EOF）
+// maxlen个字节都没有\n ，返回maxlen-1,最后一位存'\0'
+// 当中遇到\n，直接返回\n之前的字节数，包括\n
 ssize_t readline(int sockfd, void *usrbuf, size_t maxlen)
 {
     //
@@ -128,10 +183,11 @@ ssize_t readline(int sockfd, void *usrbuf, size_t maxlen)
     {
         //预读取
         nread = recv_peek(sockfd, bufp, nleft);
-        if(nread <= 0)
+        if(nread <= 0) // 出错或者EOF，直接返回
             return nread;
-
+        
         //检查\n
+        //检查到\n，就从套接字缓冲区中取走\n以前的数据(包括\n)
         int i;
         for(i = 0; i < nread; ++i)
         {
@@ -143,12 +199,12 @@ ssize_t readline(int sockfd, void *usrbuf, size_t maxlen)
                     return -1;
                 bufp += nsize;
                 total += nsize;
-                *bufp = 0;
+                *bufp = 0; // 最后一位置0
                 return total;
             }
         }
 
-        //没找到\n
+        //没找到\n，就把peek到的都取走
         if(readn(sockfd, bufp, nread) != nread)
             return -1;
         bufp += nread;
@@ -159,7 +215,9 @@ ssize_t readline(int sockfd, void *usrbuf, size_t maxlen)
     return maxlen - 1;
 }
 
-
+// 以下这种方式读取一行的效率是很差的
+// 每次从套接字缓冲区的读取一个字符，判断是否是'\n'
+// 不推荐这种做法
 ssize_t readline_slow(int fd, void *usrbuf, size_t maxlen)
 {
     char *bufp = usrbuf;  //记录缓冲区当前位置
@@ -250,7 +308,7 @@ int tcp_server(const char *host, uint16_t port)
     addr.sin_port = htons(port);
     if(host == NULL)
     {
-        addr.sin_addr.s_addr = INADDR_ANY;
+        addr.sin_addr.s_addr = INADDR_ANY; // 绑定任意网卡
     }
     else
     {
