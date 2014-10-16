@@ -50,16 +50,20 @@
       epfd的兴趣列表中的文件描述符，epoll_ctl()将出现ENOENT错误。关闭一个文件描述符会   
       自动将其从所有的epoll实例中的兴趣列表中移除。   
    d) 参数ev是指向结构体epoll_event的指针，结构体定义如下：    
+<pre><code>
       struct epoll_event {                        
           uint32_t     events;    /* epoll events (bit mask) */             
           epoll_data_t data;      /* User data */          
       };
-      结构体epoll_event中的data字段的类型为：              
+</code></pre>
+      结构体epoll_event中的data字段的类型为：  
+<pre><code>
       typedef union epoll_data {    
           void      *ptr;              /* Pointer to user-defined data */    
           int        fd;               /* File descriptor */   
           uint32_t   u32;              /* 32-bit interger */   
           uint64_t   u64;              /* 64-bit interger */
-      } epoll_data_t;     
+      } epoll_data_t;  
+</code></pre>
 
 
