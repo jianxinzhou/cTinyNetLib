@@ -18,8 +18,8 @@
    
 ##1. 创建epoll实例：epoll_create()            
 1. 系统调用epoll_create()创建了一个新的epoll实例，其对应的兴趣列表初始化为空。    
-   > #include &lt;sys/epoll.h>      
-   > int epoll_create(int size);
+> #include &lt;sys/epoll.h>      
+> int epoll_create(int size);
 2. 参数size指定了我们想要通过epoll实例来检查的文件描述符个数。
    该参数并不是一个上限，而是告诉内核应该如何为内部数据结构划分初始大小。     
 3. 作为函数返回值，epoll_create()返回了代表新创建的epoll实例的文件描述符。           
