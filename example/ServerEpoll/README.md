@@ -78,11 +78,11 @@
 <pre><code>
 int epfd;
 struct epoll_event ev;
-
+// epoll_create
 epfd = epoll_create(5);
 if(epfd == -1)
    ERR_EXIT("epoll_create");
-   
+// epoll_ctl  
 ev.data.fd = fd; //fd为外部传入的文件描述符
 ev.events  = EPOLLIN;
 if(epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1)
