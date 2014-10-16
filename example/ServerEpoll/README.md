@@ -89,6 +89,31 @@ if(epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1)
    ERR_EXIT("epoll_ctl");
 </code></pre>
 
+##3. 事件等待：epoll_wait()
+1. 系统调用epoll_wait()返回epoll实例中处于就绪态的文件描述符信息。单个epoll_wait()调用   
+   能返回多个就绪态文件描述符的信息
+<pre><code>
+   #include <sys/epoll.h>
+   int epoll_wait(int epfd, struct epoll_event *evlist,
+                  int maxevents, int timeout);
+   Returns number of ready file descriptors, 0 on timeout, or -1 on error
+</code></pre>   
+2. 参数evlist所指向的结构体数组中返回的是有关就绪态文件描述符的信息。   
+   数组evlist的空间由调用者负责申请，所包含的元素个数在参数maxevents中指定。   
+3. 在数组evlist中，每个元素返回的都是单个就绪态文件描述符的信息。events字段返回了   
+   在该描述符上已经发生的事件掩码。data字段返回的是我们在描述符上使用epoll_ctl()注册感  
+   兴趣的事件时在ev.data 中所指定的值。注意，data字段是唯一可获知同这个事件相关的文件   
+   描述符的途径。因此，当我们调用epoll_ctl()将文件描述符添加到兴趣列表中时，应该要么   
+   将ev.data.fd设为文件描述符，要么将ev.data.ptr设为指向包含文件描述符号的结构体。   
+4. 参数timeout用来确定epoll_wait()的阻塞行为，有如下几种：   
+   a) 如果timeout等于-1，调用将一直阻塞，直到兴趣列表中的文件描述符上有事件产生，   
+      或者直到捕获到一个信号为止。   
+   b) 如果timeout等于0，执行一次非阻塞式的检查，看兴趣列表中的文件描述符产生了哪个事件。   
+   c) 如果timeout大于0，调用将阻塞至多timeout毫秒，直到文件描述符上有事件发生，   
+      或者直到捕获到一个信号为止。    
+5. 调用成功后，epoll_wait()返回数组evlist中的元素个数。如果在timeout的时间间隔内没有   
+   任何文件描述符处于就绪状态的话，返回0。出错时返回-1，并在errno中设定错误码以表示错误原因。   
+
 
 
 
