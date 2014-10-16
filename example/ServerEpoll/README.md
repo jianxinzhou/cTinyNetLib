@@ -17,9 +17,11 @@
    c) 系统调用epoll_wait()返回与epoll实例相关联的就绪列表中的成员。
    
 ##1. 创建epoll实例：epoll_create()            
-1. 系统调用epoll_create()创建了一个新的epoll实例，其对应的兴趣列表初始化为空。    
+1. 系统调用epoll_create()创建了一个新的epoll实例，其对应的兴趣列表初始化为空。
+<pre><code>
    #include &lt;sys/epoll.h>      
    int epoll_create(int size);
+</code></pre>
 2. 参数size指定了我们想要通过epoll实例来检查的文件描述符个数。
    该参数并不是一个上限，而是告诉内核应该如何为内部数据结构划分初始大小。     
 3. 作为函数返回值，epoll_create()返回了代表新创建的epoll实例的文件描述符。           
@@ -61,7 +63,7 @@
       结构体epoll_event中的data字段的类型为：  
 <pre><code>
       typedef union epoll_data {    
-          void      *ptr;              /\* Pointer to user-defined data \*/    
+          void      \*ptr;             /\* Pointer to user-defined data \*/    
           int        fd;               /\* File descriptor \*/   
           uint32_t   u32;              /\* 32-bit interger \*/   
           uint64_t   u64;              /\* 64-bit interger \*/
