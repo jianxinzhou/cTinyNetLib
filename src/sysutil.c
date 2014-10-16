@@ -67,7 +67,7 @@ int32_t recv_int32(int sockfd)
     if(nread == -1) // ERROR
         ERR_EXIT("recv_int32");
     else if(nread < sizeof(int32_t))
-        return 0;  // 所读字节数小于32字节，作为关闭处理
+        return 0;  // 所读字节数小于4字节，作为关闭处理
 
     return ntohs(tmp); //转化为主机字节序
 }
@@ -178,7 +178,7 @@ ssize_t recv_peek(int sockfd, void *buf, size_t len)
  * @sockfd:   套接字
  * @buf:      接收缓冲区
  * @maxlen:   每行最大长度
- * 成功返回>=0，失败返回-1
+ * 成功返回>=0，失败直接挂掉程序（修改前失败返回-1）
  */
 // 出错返回1
 // EOF返回0（只要没遇到\n前，就EOF，返回0，因为默认发送方发送的每条消息以'\n'结束。此处可能一开始就是EOF）
@@ -196,9 +196,15 @@ ssize_t readline(int sockfd, void *usrbuf, size_t maxlen)
     {
         //预读取
         nread = recv_peek(sockfd, bufp, nleft);
+        /*
         if(nread <= 0) // 出错或者EOF，直接返回
             return nread;
-        
+        */
+        if(nread == -1) // ERROR
+            ERR_EXIT("readline");
+        else if(nread == 0) // EOF
+            return 0;
+
         //检查\n
         //检查到\n，就从套接字缓冲区中取走\n以前的数据(包括\n)
         int i;
@@ -494,7 +500,7 @@ size_t recv_msg_with_len(int sockfd, void *usrbuf, size_t bufsize)
     ssize_t nread = readn(sockfd, usrbuf, len);
     if(nread == -1)
         ERR_EXIT("recv_msg_with_len");
-    else if((size_t)nread < len) //字节不够做关闭处理（实际上包含了nread == 0 以及 0<nread<len）
+    else if((size_t)nread < len) // 读不够，视对方关闭套接字
         return 0;
 
     return len;
