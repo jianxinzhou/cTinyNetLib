@@ -26,7 +26,7 @@ Welcome to the cTinyNetLib wiki!
 ###2. send_int32和recv_int32               
   a) void send_int32(int sockfd, int32_t val)                                  
      用于告知对方会发送多少字节的数据量               
-     send_int32的内部实现是使用writen，向套接字缓冲区write32个字节               
+     send_int32的内部实现是使用writen，向套接字缓冲区 write 4个字节               
      显然如果在write的过程中发生错误，writen会返回-1，此时send_int32的处理是直接将程序挂掉。           
      注意，虽然发送者的程序已经挂掉，但是套接字缓冲区中可能会有发送者挂掉之前发送的内容，当然也有可能是由于发送者网络突然断线，      但无论如何，套接字缓冲区可能会有部分不完整的发送者所write的内容，因此请看以下recv_int32的处理                      
  
@@ -34,7 +34,7 @@ Welcome to the cTinyNetLib wiki!
      用于接收对方将要发送的数据量的字节数                                   
      recv_int32的内部实现是使用readn，从套接字缓冲区中取走内容                       
      显然如果在read的过程中发生错误，readn会返回-1，此时recv_int32的处理是直接将程序挂掉                              
-     注意：套接字缓冲区可能会有部分不完整的发送者所write的内容，因此此时readn返回的字节数必将会小于32个字节，此时recv_int32的处      理是返回0，也就是视作对方关闭套接字，而实际情况也正是如此，因为如果对方出错，就直接挂掉程序了，套接字也就关闭了。    
+     注意：套接字缓冲区可能会有部分不完整的发送者所write的内容，因此此时readn返回的字节数必将会小于4个字节，此时recv_int32的处      理是返回0，也就是视作对方关闭套接字，而实际情况也正是如此，因为如果对方出错，就直接挂掉程序了，套接字也就关闭了。    
      
 ###3. send_msg_with_len和recv_msg_with_len    
   a) void send_msg_with_len(int sockfd, const void *usrbuf, size_t count)    
