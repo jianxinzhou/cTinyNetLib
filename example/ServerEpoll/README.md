@@ -30,9 +30,11 @@
    这是由于调用fork()或者dup()这样类似的函数所致）。
 
 ##2. 修改epoll的兴趣列表：epoll_ctl()   
-1. 系统调用epoll_ctl()能够修改由文件描述符epfd所代表的epoll实例中的兴趣列表。   
+1. 系统调用epoll_ctl()能够修改由文件描述符epfd所代表的epoll实例中的兴趣列表。 
+<pre><code>
    #include &lt;sys/epoll.h>     
    int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev);  
+</code></pre>
 2. 参数fd指明了要修改兴趣列表中的哪一个文件描述符的设定。    
    该参数可以是代表管道、FIFO、套接字、POSIX消息队列、inotify实例、终端、设备，   
    甚至是另一个epoll实例的文件描述符（例如，我们可以为受检查的描述符建立起一种层次关系）。  
@@ -52,17 +54,17 @@
    d) 参数ev是指向结构体epoll_event的指针，结构体定义如下：    
 <pre><code>
       struct epoll_event {                        
-          uint32_t     events;    /* epoll events (bit mask) */             
-          epoll_data_t data;      /* User data */          
+          uint32_t     events;    /\* epoll events (bit mask) \*/             
+          epoll_data_t data;      /\* User data \*/          
       };
 </code></pre>
       结构体epoll_event中的data字段的类型为：  
 <pre><code>
       typedef union epoll_data {    
-          void      *ptr;              /* Pointer to user-defined data */    
-          int        fd;               /* File descriptor */   
-          uint32_t   u32;              /* 32-bit interger */   
-          uint64_t   u64;              /* 64-bit interger */
+          void      *ptr;              /\* Pointer to user-defined data \*/    
+          int        fd;               /\* File descriptor \*/   
+          uint32_t   u32;              /\* 32-bit interger \*/   
+          uint64_t   u64;              /\* 64-bit interger \*/
       } epoll_data_t;  
 </code></pre>
 
