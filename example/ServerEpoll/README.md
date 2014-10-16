@@ -63,11 +63,51 @@
       结构体epoll_event中的data字段的类型为：  
 <pre><code>
       typedef union epoll_data {    
-          void      \*ptr;             /\* Pointer to user-defined data \*/    
+          void       \*ptr;            /\* Pointer to user-defined data \*/    
           int        fd;               /\* File descriptor \*/   
           uint32_t   u32;              /\* 32-bit interger \*/   
           uint64_t   u64;              /\* 64-bit interger \*/
       } epoll_data_t;  
+</code></pre>    
+      参数ev为文件描述符fd所做的设置如下：
+      1) 结构体epoll_event中的events字段是一个位掩码，它指定了我们为待检查的描述符   
+         fd上所感兴趣的事件集合。    
+      2) data字段是一个联合体，当描述符fd稍后称为就绪态时，联合体的成员可用来指定传  
+         回给调用进程的信息。   
+   e) 示例如下：   
+<pre><code>
+int epfd;
+struct epoll_event ev;
+
+epfd = epoll_create(5);
+if(epfd == -1)
+   ERR_EXIT("epoll_create");
+   
+ev.data.fd = fd; //fd为外部传入的文件描述符
+ev.events  = EPOLLIN;
+if(epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1)
+   ERR_EXIT("epoll_ctl");
 </code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
