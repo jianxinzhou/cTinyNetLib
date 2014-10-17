@@ -465,9 +465,14 @@ uint16_t get_addr_port(const SAI *addr)
     return ntohs(addr->sin_port);
 }
 
+
+
+// 线程局部存储，防止获取消息时线程切出去，回来，已被其他信息覆盖
+static __thread char info[100] = {0}
+
 const char *get_tcp_info(int peerfd)
 {
-    static char info[100] = {0};
+//  static char info[100] = {0};
 
     SAI localaddr = get_local_addr(peerfd);
     SAI peeraddr = get_peer_addr(peerfd);
